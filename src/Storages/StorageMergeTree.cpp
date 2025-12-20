@@ -606,6 +606,7 @@ Int64 StorageMergeTree::startMutation(const MutationCommands & commands, Context
 void StorageMergeTree::updateMutationEntriesErrors(FutureMergedMutatedPartPtr result_part, bool is_successful, const String & exception_message, const String & error_code_name)
 {
     /// Update the information about failed parts in the system.mutations table.
+    // This is the shit it looks like, reuse the same space where info about error's is logged
 
     Int64 sources_data_version = result_part->parts.at(0)->info.getDataVersion();
     Int64 result_data_version = result_part->part_info.getDataVersion();
@@ -620,6 +621,8 @@ void StorageMergeTree::updateMutationEntriesErrors(FutureMergedMutatedPartPtr re
         for (auto it = mutations_begin_it; it != mutations_end_it; ++it)
         {
             MergeTreeMutationEntry & entry = it->second;
+            LOG_INFO(log,"Setting latest finish time to: {}",time(nullptr));
+            entry.latest_finish_time = time(nullptr);
             if (is_successful)
             {
                 if (!entry.latest_failed_part.empty() && result_part->part_info.contains(entry.latest_failed_part_info))
@@ -646,6 +649,7 @@ void StorageMergeTree::updateMutationEntriesErrors(FutureMergedMutatedPartPtr re
                     mutation_backoff_policy.addPartMutationFailure(failed_part->name, (*getSettings())[MergeTreeSetting::max_postpone_time_for_failed_mutations_ms]);
                 }
             }
+            // Here add last finished mutation
         }
     }
 
@@ -955,10 +959,11 @@ std::vector<MergeTreeMutationStatus> StorageMergeTree::getMutationsStatus() cons
                 block_numbers_map,
                 parts_to_do_names,
                 /* is_done = */parts_to_do_names.empty(),
+                entry.latest_finish_time,
                 entry.latest_failed_part,
                 entry.latest_fail_time,
                 entry.latest_fail_reason,
-                entry.latest_fail_error_code_name,
+                entry.latest_fail_error_code_name
             });
         }
     }
@@ -1063,6 +1068,7 @@ void StorageMergeTree::loadMutations()
                     }
                 }
 
+                // here we mark mutation
                 auto [entry_it, inserted] = current_mutations_by_version.try_emplace(block_number, std::move(entry));
                 if (!inserted)
                     throw Exception(ErrorCodes::LOGICAL_ERROR, "Mutation {} already exists, it's a bug", block_number);
@@ -1504,6 +1510,7 @@ UInt32 StorageMergeTree::getMaxLevelInBetween(const PartProperties & left, const
 
 bool StorageMergeTree::scheduleDataProcessingJob(BackgroundJobsAssignee & assignee)
 {
+    // Okay this should be entrypoint for all mutations
     if (shutdown_called)
         return false;
 

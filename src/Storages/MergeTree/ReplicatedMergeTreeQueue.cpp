@@ -2341,6 +2341,7 @@ bool ReplicatedMergeTreeQueue::tryFinalizeMutations(zkutil::ZooKeeperPtr zookeep
             {
                 LOG_TRACE(log, "Marking mutation {} done because it is <= mutation_pointer ({})", znode, mutation_pointer);
                 mutation.is_done = true;
+                //mutation.finish_time =
                 mutation.latest_fail_reason.clear();
                 mutation.latest_fail_error_code_name.clear();
                 alter_sequence.finishDataAlter(mutation.entry->alter_version, lock);
@@ -2517,9 +2518,11 @@ std::optional<MergeTreeMutationStatus> ReplicatedMergeTreeQueue::getIncompleteMu
         return {};
 
     const MutationStatus & status = current_mutation_it->second;
+    // TODO fix for replicated mutatins
     MergeTreeMutationStatus result
     {
         .is_done = status.is_done,
+        .latest_finish_time = status.latest_finish_time,
         .latest_failed_part = status.latest_failed_part,
         .latest_fail_time = status.latest_fail_time,
         .latest_fail_reason = status.latest_fail_reason,
@@ -2569,6 +2572,7 @@ std::vector<MergeTreeMutationStatus> ReplicatedMergeTreeQueue::getMutationsStatu
                 entry.block_numbers,
                 parts_to_mutate,
                 status.is_done,
+                status.latest_finish_time,
                 status.latest_failed_part,
                 status.latest_fail_time,
                 status.latest_fail_reason,

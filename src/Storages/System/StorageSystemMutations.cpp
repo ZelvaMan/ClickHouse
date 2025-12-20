@@ -50,6 +50,7 @@ ColumnsDescription StorageSystemMutations::getColumnsDescription()
         { "latest_fail_time",             std::make_shared<DataTypeDateTime>(), "The date and time of the most recent part mutation failure."},
         { "latest_fail_reason",           std::make_shared<DataTypeString>(), "The exception message that caused the most recent part mutation failure."},
         { "latest_fail_error_code_name",  std::make_shared<DataTypeString>(), "The error code of the exception that caused the most recent part mutation failure."},
+        { "finish_time",  std::make_shared<DataTypeDateTime>(), "TODO"},
     };
 }
 
@@ -169,6 +170,8 @@ void StorageSystemMutations::fillData(MutableColumns & res_columns, ContextPtr c
             res_columns[col_num++]->insert(UInt64(status.latest_fail_time));
             res_columns[col_num++]->insert(status.latest_fail_reason);
             res_columns[col_num++]->insert(status.latest_fail_error_code_name);
+            // TODO this needs to be saved to disk to survive server restart
+            res_columns[col_num++]->insert(UInt64(status.latest_finish_time));
         }
     }
 }

@@ -24,6 +24,7 @@ struct MergeTreeMutationStatus
 
     /// If the mutation is done. Note that in case of ReplicatedMergeTree parts_to_do == 0 doesn't imply is_done == true.
     bool is_done = false;
+    time_t latest_finish_time = 0;
 
     String latest_failed_part = "";
     time_t latest_fail_time = 0;
